@@ -8,7 +8,7 @@ import numpy as np
 from pymanopt.solvers.linesearch import LineSearchAdaptive
 from pymanopt.solvers.solver import Solver
 from pymanopt import tools
-
+from functools import partial
 
 BetaTypes = tools.make_enum(
     "BetaTypes",
@@ -47,7 +47,7 @@ class ConjugateGradient(Solver):
             self._linesearch = linesearch
         self.linesearch = None
 
-    def solve(self, problem, x=None, reuselinesearch=False):
+    def solve(self, problem, x=None, feed_dict=None, reuselinesearch=False):
         """
         Perform optimization using nonlinear conjugate gradient method with
         linesearch.
@@ -73,9 +73,12 @@ class ConjugateGradient(Solver):
         """
         man = problem.manifold
         verbosity = problem.verbosity
-        objective = problem.cost
-        gradient = problem.grad
-
+        if feed_dict:
+            objective = partial(problem.cost, feed_dict=feed_dict)
+            gradient = partial(problem.grad, feed_dict=feed_dict)
+        else:
+            objective = problem.cost
+            gradient = problem.grad
         if not reuselinesearch or self.linesearch is None:
             self.linesearch = deepcopy(self._linesearch)
         linesearch = self.linesearch

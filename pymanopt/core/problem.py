@@ -49,7 +49,8 @@ class Problem(object):
             is silent, 2 is most information.
     """
     def __init__(self, manifold, cost, egrad=None, ehess=None, grad=None,
-                 hess=None, arg=None, precon=None, verbosity=2):
+                 hess=None, arg=None, precon=None, 
+                 verbosity=2):
         self.manifold = manifold
         # We keep a reference to the original cost function in case we want to
         # call the `prepare` method twice (for instance, after switching from
@@ -62,7 +63,7 @@ class Problem(object):
         self._hess = hess
         self._arg = arg
         self._backend = None
-
+        
         if precon is None:
             def precon(x, d):
                 return d
@@ -126,8 +127,8 @@ class Problem(object):
             # Explicit access forces computation/compilation if necessary.
             egrad = self.egrad
 
-            def grad(x):
-                return self.manifold.egrad2rgrad(x, egrad(x))
+            def grad(x, feed_dict):
+                return self.manifold.egrad2rgrad(x, egrad(x, feed_dict))
             self._grad = grad
         return self._grad
 
@@ -147,8 +148,8 @@ class Problem(object):
             # Explicit access forces computation if necessary.
             ehess = self.ehess
 
-            def hess(x, a):
+            def hess(x, a, feed_dict):
                 return self.manifold.ehess2rhess(
-                    x, self.egrad(x), ehess(x, a), a)
+                    x, self.egrad(x, feed_dict), ehess(x, a, feed_dict), a)
             self._hess = hess
         return self._hess
