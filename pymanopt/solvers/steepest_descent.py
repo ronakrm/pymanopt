@@ -89,8 +89,8 @@ class SteepestDescent(Solver):
             stepsize, x = linesearch.search(objective, man, x, desc_dir,
                                             cost, -gradnorm**2)
 
-            stop_reason = self._check_stopping_criterion(
-                time0, stepsize=stepsize, gradnorm=gradnorm, iter=iter)
+            stop_reason = self._check_stopping_criterion(time0, iter=iter,
+                objective=cost, stepsize=stepsize, gradnorm=gradnorm)
 
             if stop_reason:
                 if verbosity >= 1:

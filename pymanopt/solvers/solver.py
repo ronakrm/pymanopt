@@ -9,14 +9,17 @@ class Solver(object):
 
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, maxtime=1000, maxiter=1000, mingradnorm=1e-6,
-                 minstepsize=1e-10, maxcostevals=5000, logverbosity=0):
+    def __init__(self, maxtime=1000, maxiter=1000, mincost=5e-11,
+                 mingradnorm=1e-6, minstepsize=1e-10, maxcostevals=5000, 
+                 logverbosity=0):
         """
         Variable attributes (defaults in brackets):
             - maxtime (1000)
                 Max time (in seconds) to run.
             - maxiter (1000)
                 Max number of iterations to run.
+            - mincost (5e-11)
+                Terminate if the cost drops below this tolerance.
             - mingradnorm (1e-6)
                 Terminate if the norm of the gradient is below this.
             - minstepsize (1e-10)
@@ -30,6 +33,7 @@ class Solver(object):
         """
         self._maxtime = maxtime
         self._maxiter = maxiter
+        self._mincost = mincost
         self._mingradnorm = mingradnorm
         self._minstepsize = minstepsize
         self._maxcostevals = maxcostevals
@@ -48,8 +52,9 @@ class Solver(object):
         '''
         pass
 
-    def _check_stopping_criterion(self, time0, iter=-1, gradnorm=float('inf'),
-                                  stepsize=float('inf'), costevals=-1):
+    def _check_stopping_criterion(self, time0, iter=-1, objective=float('inf'),
+                                  gradnorm=float('inf'), stepsize=float('inf'),
+                                  costevals=-1):
         reason = None
         if time.time() >= time0 + self._maxtime:
             reason = ("Terminated - max time reached after %d iterations."
@@ -57,6 +62,10 @@ class Solver(object):
         elif iter >= self._maxiter:
             reason = ("Terminated - max iterations reached after "
                       "%.2f seconds." % (time.time() - time0))
+        elif objective < self._mincost:
+          reason = ("Terminated - min objective value reached after %d "
+                      "iterations, %.2f seconds." % (
+                        iter, (time.time() - time0)))
         elif gradnorm < self._mingradnorm:
             reason = ("Terminated - min grad norm reached after %d "
                       "iterations, %.2f seconds." % (
@@ -78,6 +87,8 @@ class Solver(object):
                                                  self._maxtime,
                                                  'maxiter':
                                                  self._maxiter,
+                                                 'mincost':
+                                                 self._mincost,
                                                  'mingradnorm':
                                                  self._mingradnorm,
                                                  'minstepsize':
