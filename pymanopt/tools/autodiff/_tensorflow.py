@@ -34,7 +34,7 @@ class TensorflowBackend(Backend):
         if isinstance(objective, tf.Tensor):
             if (argument is None or not
                 isinstance(argument, tf.Variable) and not
-                all([isinstance(arg, tf.Variable)
+                all([isinstance(arg, tf.Variable) or isinstance(arg, tf.Tensor)
                      for arg in argument])):
                 raise ValueError(
                     "Tensorflow backend requires an argument (or sequence of "
@@ -47,14 +47,19 @@ class TensorflowBackend(Backend):
     def compile_function(self, objective, argument):
         if not isinstance(argument, list):
 
-            def func(x):
-                feed_dict = {argument: x}
-                return self._session.run(objective, feed_dict)
+            def func(x, feed_dict=None):
+                feed_dict_all = {argument: x}
+                if feed_dict is not None:
+                    feed_dict_all.update(feed_dict)
+                return self._session.run(objective, feed_dict_all)
         else:
 
-            def func(x):
-                feed_dict = {i: d for i, d in zip(argument, x)}
-                return self._session.run(objective, feed_dict)
+            def func(x, feed_dict=None):
+                feed_dict_all = {i: d for i, d in zip(argument, x)}
+                if feed_dict is not None:
+                    feed_dict_all.update(feed_dict)
+
+                return self._session.run(objective, feed_dict_all)
 
         return func
 
@@ -67,15 +72,19 @@ class TensorflowBackend(Backend):
 
         if not isinstance(argument, list):
 
-            def grad(x):
-                feed_dict = {argument: x}
-                return self._session.run(tfgrad[0], feed_dict)
+            def grad(x, feed_dict=None):
+                feed_dict_all = {argument: x}
+                if feed_dict is not None:
+                    feed_dict_all.update(feed_dict)
+                return self._session.run(tfgrad[0], feed_dict_all)
 
         else:
 
-            def grad(x):
-                feed_dict = {i: d for i, d in zip(argument, x)}
-                return self._session.run(tfgrad, feed_dict)
+            def grad(x, feed_dict=None):
+                feed_dict_all = {i: d for i, d in zip(argument, x)}
+                if feed_dict is not None:
+                    feed_dict_all.update(feed_dict)
+                return self._session.run(tfgrad, feed_dict_all)
 
         return grad
 
@@ -85,16 +94,20 @@ class TensorflowBackend(Backend):
             argA = tf.zeros_like(argument)
             tfhess = _hessian_vector_product(objective, [argument], [argA])
 
-            def hess(x, a):
-                feed_dict = {argument: x, argA: a}
-                return self._session.run(tfhess[0], feed_dict)
+            def hess(x, a, feed_dict=None):
+                feed_dict_all = {argument: x, argA: a}
+                if feed_dict is not None:
+                    feed_dict_all.update(feed_dict)
+                return self._session.run(tfhess[0], feed_dict_all)
 
         else:
             argA = [tf.zeros_like(arg) for arg in argument]
             tfhess = _hessian_vector_product(objective, argument, argA)
 
-            def hess(x, a):
-                feed_dict = {i: d for i, d in zip(argument+argA, x+a)}
-                return self._session.run(tfhess, feed_dict)
+            def hess(x, a, feed_dict=None):
+                feed_dict_all = {i: d for i, d in zip(argument+argA, x+a)}
+                if feed_dict is not None:
+                    feed_dict_all.update(feed_dict)
+                return self._session.run(tfhess, feed_dict_all)
 
         return hess

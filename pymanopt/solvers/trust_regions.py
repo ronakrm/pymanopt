@@ -56,7 +56,7 @@ from __future__ import print_function, division
 import time
 
 import numpy as np
-
+from functools import partial
 from pymanopt.solvers.solver import Solver
 
 if not hasattr(__builtins__, "xrange"):
@@ -94,7 +94,7 @@ class TrustRegions(Solver):
         self.use_rand = use_rand
         self.rho_regularization = rho_regularization
 
-    def solve(self, problem, x=None, mininner=1, maxinner=None,
+    def solve(self, problem, x=None, feed_dict=None, mininner=1, maxinner=None,
               Delta_bar=None, Delta0=None):
         man = problem.manifold
         verbosity = problem.verbosity
@@ -113,9 +113,14 @@ class TrustRegions(Solver):
         if Delta0 is None:
             Delta0 = Delta_bar / 8
 
-        cost = problem.cost
-        grad = problem.grad
-        hess = problem.hess
+        if feed_dict:
+            cost = partial(problem.cost, feed_dict=feed_dict)
+            grad = partial(problem.grad, feed_dict=feed_dict)
+            hess = partial(problem.hess, feed_dict=feed_dict)           
+        else:
+            cost = problem.cost
+            grad = problem.grad
+            hess = problem.hess
 
         # If no starting point is specified, generate one at random.
         if x is None:
@@ -168,7 +173,7 @@ class TrustRegions(Solver):
 
             # Solve TR subproblem approximately
             eta, Heta, numit, stop_inner = self._truncated_conjugate_gradient(
-                problem, x, fgradx, eta, Delta, self.theta, self.kappa,
+                problem, x, feed_dict, fgradx, eta, Delta, self.theta, self.kappa,
                 mininner, maxinner)
 
             srstr = self.TCG_STOP_REASONS[stop_inner]
@@ -383,11 +388,15 @@ class TrustRegions(Solver):
                               gradnorm=norm_grad, iter=k)
             return x, self._optlog
 
-    def _truncated_conjugate_gradient(self, problem, x, fgradx, eta, Delta,
+    def _truncated_conjugate_gradient(self, problem, x, feed_dict, fgradx, eta, Delta,
                                       theta, kappa, mininner, maxinner):
         man = problem.manifold
         inner = man.inner
-        hess = problem.hess
+        if feed_dict:
+            hess = partial(problem.hess, feed_dict=feed_dict)           
+        else:
+            hess = problem.hess
+            
         precon = problem.precon
 
         if not self.use_rand:  # and therefore, eta == 0
