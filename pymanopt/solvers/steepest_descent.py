@@ -6,6 +6,7 @@ from copy import deepcopy
 from pymanopt.solvers.linesearch import LineSearchBackTracking
 from pymanopt.solvers.solver import Solver
 
+from functools import partial 
 
 class SteepestDescent(Solver):
     """
@@ -23,7 +24,7 @@ class SteepestDescent(Solver):
         self.linesearch = None
 
     # Function to solve optimisation problem using steepest descent.
-    def solve(self, problem, x=None, reuselinesearch=False):
+    def solve(self, problem, x=None, feed_dict=None, reuselinesearch=False):
         """
         Perform optimization using gradient descent with linesearch.
         This method first computes the gradient (derivative) of obj
@@ -38,6 +39,9 @@ class SteepestDescent(Solver):
             - x=None
                 Optional parameter. Starting point on the manifold. If none
                 then a starting point will be randomly generated.
+            - feed_dict=None
+                Optional parameter. Dictionary from which to compute partial
+                objectives and gradients. 
             - reuselinesearch=False
                 Whether to reuse the previous linesearch object. Allows to
                 use information from a previous solve run.
@@ -48,8 +52,12 @@ class SteepestDescent(Solver):
         """
         man = problem.manifold
         verbosity = problem.verbosity
-        objective = problem.cost
-        gradient = problem.grad
+        if feed_dict:
+            objective = partial(problem.cost, feed_dict=feed_dict)
+            gradient = partial(problem.grad, feed_dict=feed_dict)
+        else:
+            objective = problem.cost
+            gradient = problem.grad
 
         if not reuselinesearch or self.linesearch is None:
             self.linesearch = deepcopy(self._linesearch)
